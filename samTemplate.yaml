@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Pecuniary Transaction Query services
+
+Parameters:
+  AppName:
+    Description: Application name
+    Type: String
+    Default: Pecuniary
+  PecuniaryStackParameter:
+    Type: String
+    Default: pecuniary-stack
+
+Mappings:
+  Constants:
+    Application: 
+      Name: Pecuniary
+
+Globals:
+  Function:
+    Timeout: 30
+
+Resources:
+  PecuniaryWebApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+      Auth:
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: 
+                Fn::Sub:
+                    - arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
+                    - UserPoolId:
+                        Fn::ImportValue:
+                          !Sub ${PecuniaryStackParameter}-PecuniaryCognitoUserPoolId
+            Identity:
+              Header: Authorization
+      Tags:
+        AppName: !FindInMap [Constants, Application, Name]
+
+  SecurityEvent:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: pecuniary-SecurityEvent
+      Handler: Pecuniary.Security.Events::Pecuniary.Security.Events.Function::SecurityEventHandlerAsync
+      Runtime: dotnetcore2.1
+      CodeUri: Pecuniary.Security.Events/bin/Debug/netcoreapp2.1/publish
+      MemorySize: 384
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          ElasticSearchDomain:
+            Fn::ImportValue:
+              !Sub ${PecuniaryStackParameter}-PecuniaryESReadStoreDomain
+      Events:
+        SecurityCreatedEventTopic:
+          Type: SNS
+          Properties:
+            Topic:
+              Fn::ImportValue:
+                !Sub ${PecuniaryStackParameter}-PecuniarySecurityCreatedEventTopicArn
+      Policies: 
+        - AmazonSNSReadOnlyAccess
+      Tags:
+        AppName: !Ref AppName 
+
+  SecurityQueryWebApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: pecuniary-SecurityQuery
+      Handler: Pecuniary.Security.Query::Pecuniary.Security.Query.LambdaEntryPoint::FunctionHandlerAsync
+      Runtime: dotnetcore2.1
+      CodeUri: Pecuniary.Security.Query/bin/Debug/netcoreapp2.1/publish
+      MemorySize: 384
+      Environment:
+        Variables:
+          ElasticSearchDomain:
+            Fn::ImportValue:
+              !Sub ${PecuniaryStackParameter}-PecuniaryESReadStoreDomain
+      Events:
+        GetValues:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PecuniaryWebApi
+            Path: /api/security/{id}
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+      Tags:
+         AppName: !Ref AppName
+
+Outputs:
+  PecuniaryApiGatewayBaseUrl:
+    Description: Base Url of the Pecuniary API Gateway
+    Value: !Ref PecuniaryWebApi
+    Export:
+      Name: !Sub ${AWS::StackName}-PecuniaryApiGatewayBaseUrl

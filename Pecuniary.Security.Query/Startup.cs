@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using EricBach.CQRS.QueryRepository;
 using EricBach.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
@@ -54,7 +55,8 @@ namespace Pecuniary.Security.Query
 
             // Query Service
             //services.AddScoped<IReadRepository<AccountViewModel>, InMemoryRepository>();
-            services.AddScoped<IReadRepository<SecurityReadModel>, ElasticSearchRepository<SecurityReadModel>>();
+            services.AddScoped<IReadRepository<SecurityReadModel>>(r =>
+                new ElasticSearchRepository<SecurityReadModel>(Environment.GetEnvironmentVariable("ElasticSearchDomain")));
         }
     }
 }

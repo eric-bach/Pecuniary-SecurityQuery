@@ -1,12 +1,13 @@
 [CmdletBinding()]
 param (
-    [Parameter(Mandatory=$true, HelpMessage="Enter your config name defined in developers.json: ")][string]$configName,
-    $skipBuild
+    [Parameter(Mandatory=$false, HelpMessage="Enter your config name defined in developers.json: ")][string]$configName
 )
 
 $environment = Get-Content 'developers.json' | Out-String | ConvertFrom-Json
 
 $config = $environment.$configName
+
+$stackName = "pecuniary-securityquery-stack"
 
 $developerPrefix = $config.Prefix
 
@@ -20,9 +21,11 @@ Write-Host "`nCreating/updating $localFileName based on $sourceFile..."
 
 Copy-Item samTemplate.yaml $localFileName
 
-if ($config.Prefix) # Is a Developer
+if ($config.Prefix)
 {  
     Write-Host "`n`tDeveloper config selected" -ForegroundColor Yellow
+
+    $stackName = $developerPrefix-$stackName
 
     (Get-Content $localFileName) `
         -replace 'pecuniary-', "$developerPrefix-pecuniary-" `
@@ -32,50 +35,44 @@ if ($config.Prefix) # Is a Developer
 
 Write-Host "`nDone! $localFileName updated. Please use this file when deploying to our own AWS stack.`n"
 
-if (!$config.Prefix) { exit 0 } # Is Staging or Production
-
-Write-Host "Press [enter] to continue deploying stack to AWS (Ctrl+C to exit)" -NoNewline -ForegroundColor Green
-Read-Host
+if ($config.Prefix) 
+{ 
+    Write-Host "Press [enter] to continue deploying stack to AWS (Ctrl+C to exit)" -NoNewline -ForegroundColor Green
+    Read-Host
+}
 
 $samTemplate = 'samTemplate.yaml.local'
 
-if ($skipBuild)
-{
-    Write-Host "Skipping build"
-}
-else
-{
-    Write-Host "`n`nPrebuild:"
-    
-    dotnet restore Pecuniary.Security.Events/Pecuniary.Security.Events.csproj
-    dotnet restore Pecuniary.Security.Query/Pecuniary.Security.Query.csproj
-    
-    Write-Host "`n`nBuild:"
-    
-    dotnet publish Pecuniary.Security.Events/Pecuniary.Security.Events.csproj
-    dotnet publish Pecuniary.Security.Query/Pecuniary.Security.Query.csproj
-}
-  
+Write-Host "`n`nPrebuild:"
+
+dotnet restore Pecuniary.Security.Events/Pecuniary.Security.Events.csproj
+dotnet restore Pecuniary.Security.Query/Pecuniary.Security.Query.csproj
+
+Write-Host "`n`nBuild:"
+
+dotnet publish Pecuniary.Security.Events/Pecuniary.Security.Events.csproj
+dotnet publish Pecuniary.Security.Query/Pecuniary.Security.Query.csproj
+
 Write-Host "`n`nDeploy:"
 
 dotnet-lambda deploy-serverless `
-    --stack-name $developerPrefix-pecuniary-securityquery-stack `
+    --stack-name $stackName `
     --template $samTemplate `
     --region us-west-2 `
-    --s3-prefix $developerPrefix- `
-    --s3-bucket pecuniary1-deployment-artifacts
+    --s3-bucket pecuniary-deployment-artifacts    
 
 # Get the API Gateway Base URL
-$stack = aws cloudformation describe-stacks --stack-name $developerPrefix-pecuniary-securityquery-stack | ConvertFrom-Json
+$stack = aws cloudformation describe-stacks --stack-name $stackName | ConvertFrom-Json
 $outputKey = $stack.Stacks.Outputs.OutputKey.IndexOf("PecuniaryApiGatewayBaseUrl")
 $apiGatewayBaseUrl = $stack.Stacks.Outputs[$outputKey].OutputValue
 
 # Add scopes
 Write-Host "`n`Adding Scopes to $apiGatewayBaseUrl"
 aws lambda invoke `
-    --function-name "$developerPrefix-pecuniary-AddScopes" `
+    --function-name "pecuniary-AddScopes" `
     --payload """{ """"ApiGatewayBaseUrl"""": """"$apiGatewayBaseUrl"""" }""" `
     outfile.json
 Remove-Item outfile.json
 
-Write-Host "`n`n YOUR STACK NAME IS:   $developerPrefix-pecuniary-securityquery-stack   `n`n"
+Write-Host "`n`n YOUR STACK NAME IS:   $stackName   `n`n"
+ 

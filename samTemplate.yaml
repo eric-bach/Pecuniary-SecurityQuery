@@ -47,7 +47,7 @@ Resources:
       FunctionName: pecuniary-SecurityEvent
       Handler: Pecuniary.Security.Events::Pecuniary.Security.Events.Function::SecurityEventHandlerAsync
       Runtime: dotnetcore2.1
-      CodeUri: Pecuniary.Security.Events/bin/Debug/netcoreapp2.1/publish
+      CodeUri: Pecuniary.Security.Events/bin/Release/netcoreapp2.1/publish
       MemorySize: 384
       ReservedConcurrentExecutions: 1
       Environment:
@@ -73,7 +73,7 @@ Resources:
       FunctionName: pecuniary-SecurityQuery
       Handler: Pecuniary.Security.Query::Pecuniary.Security.Query.LambdaEntryPoint::FunctionHandlerAsync
       Runtime: dotnetcore2.1
-      CodeUri: Pecuniary.Security.Query/bin/Debug/netcoreapp2.1/publish
+      CodeUri: Pecuniary.Security.Query/bin/Release/netcoreapp2.1/publish
       MemorySize: 384
       Environment:
         Variables:

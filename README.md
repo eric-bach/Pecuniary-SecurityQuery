@@ -10,6 +10,13 @@ Unit tests | [![Build status](https://ci.appveyor.com/api/projects/status/in23yd
 Code coverage | [![codecov](https://codecov.io/gh/eric-bach/Pecuniary-SecurityQuery/branch/master/graph/badge.svg)](https://codecov.io/gh/eric-bach/Pecuniary-SecurityQuery)
 Code review | [![CodeFactor](https://www.codefactor.io/repository/github/eric-bach/pecuniary-securityQuery/badge)](https://www.codefactor.io/repository/github/eric-bach/pecuniary-securityquery)
 
+## Packages
+
+Package | Download
+-|-
+`EricBach.CQRS` | ![Nuget](https://img.shields.io/nuget/v/EricBach.CQRS) |
+`EricBach.CQRS.QueryRepository` | ![Nuget](https://img.shields.io/nuget/v/EricBach.CQRS.QueryRepository) |
+
 ## License
 
 `Pecuniary-SecurityQuery` uses the MIT license. See the [license](https://github.com/eric-bach/Pecuniary-SecurityQuery/blob/master/LICENSE).
